@@ -224,82 +224,82 @@ def main(args):
 
     output_dir = Path(args.output_dir)
 
-    # max_accuracy = 0.0
-    # if args.resume and os.path.exists('./save/checkpoint.pth'):
-    #     if args.resume.startswith('https'):
-    #         checkpoint = torch.hub.load_state_dict_from_url(
-    #             args.resume, map_location='cpu', check_hash=True)
-    #     else:
-    #         checkpoint = torch.load(args.resume, map_location='cpu')
-    #     model_without_ddp.load_state_dict(checkpoint['model'], strict=True)
-    #     max_accuracy = checkpoint['max_accuracy']
-    #     print(f'Max Accuracy is {max_accuracy:.2f} now!!')
-    #     if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-    #         optimizer.load_state_dict(checkpoint['optimizer'])
-    #         for state in optimizer.state.values():
-    #             for k, v in state.items():
-    #                 if isinstance(v, torch.Tensor):
-    #                     state[k] = v.cuda()
+    max_accuracy = 0.0
+    if args.resume and os.path.exists('./save/checkpoint.pth'):
+        if args.resume.startswith('https'):
+            checkpoint = torch.hub.load_state_dict_from_url(
+                args.resume, map_location='cpu', check_hash=True)
+        else:
+            checkpoint = torch.load(args.resume, map_location='cpu')
+        model_without_ddp.load_state_dict(checkpoint['model'], strict=True)
+        max_accuracy = checkpoint['max_accuracy']
+        print(f'Max Accuracy is {max_accuracy:.2f} now!!')
+        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            for state in optimizer.state.values():
+                for k, v in state.items():
+                    if isinstance(v, torch.Tensor):
+                        state[k] = v.cuda()
 
-    #         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
 
-    #         args.start_epoch = checkpoint['epoch'] + 1
+            args.start_epoch = checkpoint['epoch'] + 1
 
-    #         if 'scaler' in checkpoint:
-    #             loss_scaler.load_state_dict(checkpoint['scaler'])
-    # if args.eval:
-    #     test_stats = evaluate(data_loader_val, model, device, criterion)
-    #     print(
-    #         f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
-    #     return
+            if 'scaler' in checkpoint:
+                loss_scaler.load_state_dict(checkpoint['scaler'])
+    if args.eval:
+        test_stats = evaluate(data_loader_val, model, device, criterion)
+        print(
+            f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
+        return
 
-    # print(f"Start training for {args.epochs} epochs")
-    # start_time = time.time()
+    print(f"Start training for {args.epochs} epochs")
+    start_time = time.time()
 
-    # # scalar = torch.cuda.amp.GradScaler() if torch.cuda.is_bf16_supported() else None
-    # scalar = None
+    # scalar = torch.cuda.amp.GradScaler() if torch.cuda.is_bf16_supported() else None
+    scalar = None
 
-    # for epoch in range(args.start_epoch, args.epochs):
-    #     if args.distributed:
-    #         data_loader_train.sampler.set_epoch(epoch)
+    for epoch in range(args.start_epoch, args.epochs):
+        if args.distributed:
+            data_loader_train.sampler.set_epoch(epoch)
 
-    #     train_stats = train_one_epoch(
-    #         model, criterion, data_loader_train,
-    #         optimizer, device, epoch, loss_scaler,
-    #         args.clip_grad, args.clip_mode,
-    #         scalar=scalar
-    #     )
+        train_stats = train_one_epoch(
+            model, criterion, data_loader_train,
+            optimizer, device, epoch, loss_scaler,
+            args.clip_grad, args.clip_mode,
+            scalar=scalar
+        )
 
-    #     lr_scheduler.step(epoch)
+        lr_scheduler.step(epoch)
 
-    #     test_stats = evaluate(data_loader_val, model, device, criterion, scalar=scalar)
-    #     print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
+        test_stats = evaluate(data_loader_val, model, device, criterion, scalar=scalar)
+        print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
 
-    #     if args.output_dir:
-    #         max_accuracy = max(max_accuracy, test_stats["acc1"])
-    #         print(f'Max accuracy: {max_accuracy:.2f}%')
-    #         utils.save_on_master({
-    #                 'model': model_without_ddp.state_dict(),
-    #                 'optimizer': optimizer.state_dict(),
-    #                 'lr_scheduler': lr_scheduler.state_dict(),
-    #                 'epoch': epoch,
-    #                 'scaler': loss_scaler.state_dict(),
-    #                 'max_accuracy': max_accuracy,
-    #                 'args': args,
-    #         },  f'./save/checkpoint_{epoch+1}.pth')
+        if args.output_dir:
+            max_accuracy = max(max_accuracy, test_stats["acc1"])
+            print(f'Max accuracy: {max_accuracy:.2f}%')
+            utils.save_on_master({
+                    'model': model_without_ddp.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'lr_scheduler': lr_scheduler.state_dict(),
+                    'epoch': epoch,
+                    'scaler': loss_scaler.state_dict(),
+                    'max_accuracy': max_accuracy,
+                    'args': args,
+            },  f'./save/checkpoint_{epoch+1}.pth')
 
-    #     log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-    #                  **{f'test_{k}': v for k, v in test_stats.items()},
-    #                  'epoch': epoch,
-    #                  'n_parameters': n_parameters}
+        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                     **{f'test_{k}': v for k, v in test_stats.items()},
+                     'epoch': epoch,
+                     'n_parameters': n_parameters}
 
-    #     if args.output_dir and utils.is_main_process():
-    #         with (output_dir / "log.txt").open("a") as f:
-    #             f.write(json.dumps(log_stats) + "\n")
+        if args.output_dir and utils.is_main_process():
+            with (output_dir / "log.txt").open("a") as f:
+                f.write(json.dumps(log_stats) + "\n")
 
-    # total_time = time.time() - start_time
-    # total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    # print('Training time {}'.format(total_time_str))
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str))
 
     # predict and plot ROC
     print('*******************STARTING PREDICT*******************')
