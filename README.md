@@ -5,5 +5,5 @@ The code of this warehouse is mainly dedicated to solving the problem of uneven 
 torch timm sklearn
 
 ## TRAIN AND EVALUATE MODEL
-cd Imbalanced_classification_task
-python train_gpu.py
+1. cd Imbalanced_classification_task
+2. python train_gpu.py
