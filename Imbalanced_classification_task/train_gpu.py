@@ -82,7 +82,7 @@ def get_args_parser():
     # Dataset parameters
     parser.add_argument('--data_root', default='./user_features_4w.csv', type=str,
                         help='dataset path')
-    parser.add_argument('--batch-size', default=256, type=int)  # consume 8G GPU-Memory
+    parser.add_argument('--batch-size', default=256, type=int)  # consume 3G GPU-Memory
     parser.add_argument('--input_features', default=33, type=int)
     parser.add_argument('--num_classes', default=2, type=int)
     parser.add_argument('--output_dir', default='./save', help='path where to save, empty for no saving')
